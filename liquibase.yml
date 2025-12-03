@@ -1,0 +1,8 @@
+- name: Proxysql Project Setup
+  hosts: localhost
+  become: true
+  # vars_files:
+  #   - host_vars/{{ env }}.yml
+  #   - host_vars/vault_{{ env }}.yml
+  roles:
+    - "liquibase-mysql"

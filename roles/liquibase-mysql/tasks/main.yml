@@ -1,0 +1,22 @@
+- name: Template a Dockerfile to current dir
+  ansible.builtin.template:
+    src: Dockerfile.j2
+    dest: ./Dockerfile
+
+- name: Docker acr Login
+  command: >
+    az acr login --name {{ ACR_NAME }} -u {{ ACR_USER }} -p {{ ACR_PASSWORD }}
+
+- name: Build Docker image from Dockerfile
+  command: >
+    docker build
+    --build-arg MYSQL_HOST={{ MYSQL_HOST }}
+    --build-arg MYSQL_PORT={{ MYSQL_PORT }}
+    --build-arg MYSQL_USER={{ MYSQL_USER }}
+    --build-arg MYSQL_PASSWORD={{ MYSQL_PASSWORD }}
+    --build-arg MYSQL_COMMAND="update master_db_staging.master_tenant set liquibase_status={{ LIQUIBASE_STATUS }} where id not in(66,143,144,145,146);"
+    -t {{ REGISTRY_NAME }}.azurecr.io/{{ JOB_NAME }}.{{ ENVIRONMENT }}:{{ BUILD_NUMBER }} .
+
+- name: Push to acr registry
+  command: >
+    docker push {{ REGISTRY_NAME }}.azurecr.io/{{ JOB_NAME }}.{{ ENVIRONMENT }}:{{ BUILD_NUMBER }}
