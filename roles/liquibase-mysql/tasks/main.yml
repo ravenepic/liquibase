@@ -3,19 +3,35 @@
     src: Dockerfile.j2
     dest: ./Dockerfile
 
-- name: Docker acr Login
-  command: >
-    az acr login --name {{ ACR_NAME }} -u {{ ACR_USER }} -p {{ ACR_PASSWORD }}
+# - name: Docker acr Login
+#   command: >
+#     az acr login --name {{ ACR_NAME }} -u {{ ACR_USER }} -p {{ ACR_PASSWORD }}
 
-- name: Build Docker image from Dockerfile
+- name: Build Docker image from Dockerfile (all tenants)
   command: >
     docker build
     --build-arg MYSQL_HOST={{ MYSQL_HOST }}
     --build-arg MYSQL_PORT={{ MYSQL_PORT }}
     --build-arg MYSQL_USER={{ MYSQL_USER }}
     --build-arg MYSQL_PASSWORD={{ MYSQL_PASSWORD }}
-    --build-arg MYSQL_COMMAND="update master_db_staging.master_tenant set liquibase_status={{ LIQUIBASE_STATUS }} where id not in(66,143,144,145,146);"
+    --build-arg MYSQL_COMMAND="UPDATE master_db_staging.master_tenant
+                               SET liquibase_status={{ LIQUIBASE_STATUS }}
+                               WHERE id NOT IN (66,143,144,145,146);"
     -t {{ REGISTRY_NAME }}.azurecr.io/{{ JOB_NAME }}.{{ ENVIRONMENT }}:{{ BUILD_NUMBER }} .
+  when: DATABASES == "all"
+
+- name: Build Docker image from Dockerfile (selected clients)
+  command: >
+    docker build
+    --build-arg MYSQL_HOST={{ MYSQL_HOST }}
+    --build-arg MYSQL_PORT={{ MYSQL_PORT }}
+    --build-arg MYSQL_USER={{ MYSQL_USER }}
+    --build-arg MYSQL_PASSWORD={{ MYSQL_PASSWORD }}
+    --build-arg MYSQL_COMMAND="UPDATE master_db_staging.master_tenant
+                               SET liquibase_status={{ LIQUIBASE_STATUS }}
+                               WHERE tenant_id IN ({{ LIQUIBASE_SELECTED_CLIENTS }});"
+    -t {{ REGISTRY_NAME }}.azurecr.io/{{ ENVIRONMENT }}:{{ BUILD_NUMBER }} .
+  when: DATABASES == "list"
 
 - name: Push to acr registry
   command: >
